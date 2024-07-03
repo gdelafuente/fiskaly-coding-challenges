@@ -82,3 +82,14 @@ As we are in the business of compliance technology, we need to make sure that ou
 #### Credits
 
 This challenge is heavily influenced by the regulations for `KassenSichV` (Germany) as well as the `RKSV` (Austria) and our solutions for them.
+
+## Solution
+
+### Test
+
+```bash
+make install
+make run
+curl --header "Content-Type: application/json" --data '{"algorithm":"rsa","label":"test_device"}' 0.0.0.0:8080/api/v0/devices
+curl --header "Content-Type: application/json" --data '{"data":"data_to_be_signed_0"}' 0.0.0.0:8080/api/v0/devices/{device_id}/signatures 
+```

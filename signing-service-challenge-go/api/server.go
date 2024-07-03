@@ -2,7 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
+
+	"github.com/gdelafuente/fiskaly-coding-challenges/signing-service-challenge-go/application/commands"
+	"github.com/go-chi/chi"
 )
 
 // Response is the generic API response container.
@@ -17,26 +22,33 @@ type ErrorResponse struct {
 
 // Server manages HTTP requests and dispatches them to the appropriate services.
 type Server struct {
-	listenAddress string
+	listenAddress                 string
+	logger                        *slog.Logger
+	createDeviceCommandHandler    commands.CreateDeviceCommandHandler
+	createSignatureCommandHandler commands.CreateSignatureCommandHandler
 }
 
 // NewServer is a factory to instantiate a new Server.
-func NewServer(listenAddress string) *Server {
+func NewServer(listenAddress string, logger *slog.Logger, createDeviceCommandHandler commands.CreateDeviceCommandHandler, createSignatureCommandHandler commands.CreateSignatureCommandHandler) *Server {
 	return &Server{
-		listenAddress: listenAddress,
-		// TODO: add services / further dependencies here ...
+		listenAddress:                 listenAddress,
+		logger:                        logger,
+		createDeviceCommandHandler:    createDeviceCommandHandler,
+		createSignatureCommandHandler: createSignatureCommandHandler,
 	}
 }
 
 // Run registers all HandlerFuncs for the existing HTTP routes and starts the Server.
 func (s *Server) Run() error {
-	mux := http.NewServeMux()
+	router := chi.NewRouter()
+	router.Route("/api/v0", func(r chi.Router) {
+		r.Handle("/health", http.HandlerFunc(s.Health))
+		r.Handle("/devices", http.HandlerFunc(s.Devices))
+		r.Handle("/devices/{deviceID}/signatures", http.HandlerFunc(s.Signatures))
+	})
 
-	mux.Handle("/api/v0/health", http.HandlerFunc(s.Health))
-
-	// TODO: register further HandlerFuncs here ...
-
-	return http.ListenAndServe(s.listenAddress, mux)
+	s.logger.Info(fmt.Sprintf("Starting HTTP server listening on %s", s.listenAddress))
+	return http.ListenAndServe(s.listenAddress, router)
 }
 
 // WriteInternalError writes a default internal error message as an HTTP response.
